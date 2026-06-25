@@ -22,3 +22,10 @@
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 replay_pid*
+
+# IDE — IntelliJ IDEA
+.idea/
+
+# Structurizr Lite — archivos temporales y de caché generados en tiempo de ejecución
+.structurizr/
+docs/architecture/.structurizr/
