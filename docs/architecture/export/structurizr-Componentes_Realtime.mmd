@@ -1,0 +1,44 @@
+graph LR
+  linkStyle default fill:#ffffff
+
+  subgraph diagram ["Component View: RaceFlow - Realtime / Ranking Service"]
+    style diagram fill:#ffffff,stroke:#ffffff
+
+    subgraph 4 ["RaceFlow"]
+      style 4 fill:#ffffff,stroke:#194f72,color:#194f72
+
+      subgraph 9 ["Realtime / Ranking Service"]
+        style 9 fill:#ffffff,stroke:#2e6295,color:#2e6295
+
+        10("<div style='font-weight: bold'>RoomWebSocketHandler</div><div style='font-size: 70%; margin-top: 0px'>[Component: Spring WebSocket Handler]</div><div style='font-size: 80%; margin-top:10px'>Gestiona las conexiones<br />WebSocket de cada sala:<br />recibe posiciones y<br />reacciones, difunde<br />(broadcast) a los<br />participantes suscritos.</div>")
+        style 10 fill:#85bbf0,stroke:#5d82a8,color:#000000
+        11("<div style='font-weight: bold'>PositionIngestor</div><div style='font-size: 70%; margin-top: 0px'>[Component: Spring Component]</div><div style='font-size: 80%; margin-top:10px'>Valida cada posición GPS<br />entrante (descarta saltos<br />imposibles o datos<br />manipulados) antes de<br />procesarla.</div>")
+        style 11 fill:#85bbf0,stroke:#5d82a8,color:#000000
+        12("<div style='font-weight: bold'>RankingService</div><div style='font-size: 70%; margin-top: 0px'>[Component: Spring Service]</div><div style='font-size: 80%; margin-top:10px'>Recalcula el ranking de la<br />sala ante cada posición. Usa<br />la estrategia de ranking<br />según el deporte.</div>")
+        style 12 fill:#85bbf0,stroke:#5d82a8,color:#000000
+        13("<div style='font-weight: bold'>RankingStrategy</div><div style='font-size: 70%; margin-top: 0px'>[Component: Strategy (interfaz)]</div><div style='font-size: 80%; margin-top:10px'>Interfaz de cálculo de<br />ranking. Implementaciones<br />intercambiables por deporte<br />(distancia, velocidad).</div>")
+        style 13 fill:#85bbf0,stroke:#5d82a8,color:#000000
+        14("<div style='font-weight: bold'>RoomStateClient</div><div style='font-size: 70%; margin-top: 0px'>[Component: Spring Data Redis]</div><div style='font-size: 80%; margin-top:10px'>Lee y actualiza el estado de<br />sala y el ranking en Redis<br />con operaciones atómicas;<br />fuente única entre réplicas.</div>")
+        style 14 fill:#85bbf0,stroke:#5d82a8,color:#000000
+        15("<div style='font-weight: bold'>EventPublisher</div><div style='font-size: 70%; margin-top: 0px'>[Component: Spring AMQP]</div><div style='font-size: 80%; margin-top:10px'>Publica eventos de dominio<br />(sesión finalizada,<br />reacciones) en el broker.</div>")
+        style 15 fill:#85bbf0,stroke:#5d82a8,color:#000000
+      end
+
+      18["<div style='font-weight: bold'>Event Bus</div><div style='font-size: 70%; margin-top: 0px'>[Container: RabbitMQ]</div><div style='font-size: 80%; margin-top:10px'>Transporta eventos asíncronos<br />entre servicios (sesión<br />cerrada, sala creada,<br />métricas).</div>"]
+      style 18 fill:#6c3483,stroke:#4b245b,color:#ffffff
+      19[("<div style='font-weight: bold'>Estado en memoria</div><div style='font-size: 70%; margin-top: 0px'>[Container: Redis]</div><div style='font-size: 80%; margin-top:10px'>Estado compartido de salas y<br />ranking; operaciones<br />atómicas; fuente única de<br />verdad entre réplicas.</div>")]
+      style 19 fill:#c0392b,stroke:#86271e,color:#ffffff
+      5["<div style='font-weight: bold'>Web Application</div><div style='font-size: 70%; margin-top: 0px'>[Container: React + TypeScript + Leaflet.js]</div><div style='font-size: 80%; margin-top:10px'>Interfaz del atleta: mapa en<br />vivo, ranking, reacciones,<br />registro, perfil e historial.</div>"]
+      style 5 fill:#17c3b2,stroke:#10887c,color:#06303a
+    end
+
+    5-. "<div>Emite posiciones y<br />reacciones; recibe ranking y<br />posiciones</div><div style='font-size: 70%'>[WebSocket]</div>" .->10
+    10-. "<div>Entrega la posición entrante<br />para validar</div><div style='font-size: 70%'></div>" .->11
+    11-. "<div>Envía la posición válida para<br />recalcular el ranking</div><div style='font-size: 70%'></div>" .->12
+    12-. "<div>Calcula el orden según el<br />deporte</div><div style='font-size: 70%'></div>" .->13
+    12-. "<div>Lee/actualiza estado y<br />ranking</div><div style='font-size: 70%'></div>" .->14
+    14-. "<div>Operaciones atómicas sobre el<br />estado de sala</div><div style='font-size: 70%'>[Redis protocol]</div>" .->19
+    10-. "<div>Notifica sesión finalizada /<br />reacciones</div><div style='font-size: 70%'></div>" .->15
+    15-. "<div>Publica eventos de dominio</div><div style='font-size: 70%'>[AMQP]</div>" .->18
+
+  end
