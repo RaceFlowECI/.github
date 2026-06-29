@@ -42,3 +42,42 @@ de la Escuela Colombiana de Ingeniería Julio Garavito.
 | [`raceflow-session-service`](https://github.com/RaceFlowECI/raceflow-session-service) | 8084 | Persistencia de sesiones finalizadas e historial |
 | [`raceflow-metrics-service`](https://github.com/RaceFlowECI/raceflow-metrics-service) | 8085 | KPIs de negocio calculados desde eventos del broker |
 | [`raceflow-observability`](https://github.com/RaceFlowECI/raceflow-observability) | — | Stack Docker Compose: Prometheus, Grafana, Loki, Tempo, Alertmanager |
+
+---
+
+## Stack tecnológico
+
+### Backend
+
+| Tecnología | Rol |
+|---|---|
+| Java 21 + Spring Boot 3.2.5 | Base de todos los microservicios |
+| Spring Cloud Gateway | API Gateway — enrutamiento y autenticación JWT |
+| Spring WebSocket | Canal de tiempo real para posiciones y ranking |
+| Spring Data JPA + PostgreSQL | Persistencia relacional (auth, rooms, sessions, metrics) |
+| Spring Data Redis | Estado compartido de salas y ranking entre réplicas |
+| Spring AMQP + RabbitMQ | Bus de eventos asíncronos entre servicios |
+| Micrometer + Prometheus | Métricas de negocio y técnicas |
+| Logstash Logback Encoder | Logs estructurados JSON |
+| OpenTelemetry Java Agent | Trazas distribuidas (api-gateway, room, realtime) |
+
+### Frontend
+
+| Tecnología | Rol |
+|---|---|
+| React 18 + TypeScript | Framework UI |
+| Vite 5 | Build tool y dev server |
+| React Router 6 | Navegación SPA |
+| Leaflet.js + OpenStreetMap | Mapa interactivo con posiciones GPS en vivo |
+
+### Infraestructura y observabilidad
+
+| Tecnología | Versión | Rol |
+|---|---|---|
+| Docker + Docker Compose | — | Contenerización y orquestación local |
+| Prometheus | v2.51.0 | Scraping de métricas cada 15 s |
+| Grafana | 10.4.0 | Dashboards y alerting |
+| Loki | 2.9.4 | Almacenamiento de logs |
+| Promtail | 2.9.4 | Recolección de logs JSON |
+| Tempo | 2.4.0 | Backend de trazas OTLP |
+| Alertmanager | v0.27.0 | Enrutamiento de alertas |
