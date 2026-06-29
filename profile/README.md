@@ -81,3 +81,36 @@ de la Escuela Colombiana de Ingeniería Julio Garavito.
 | Promtail | 2.9.4 | Recolección de logs JSON |
 | Tempo | 2.4.0 | Backend de trazas OTLP |
 | Alertmanager | v0.27.0 | Enrutamiento de alertas |
+
+---
+
+## Arquitectura (C4)
+
+Los diagramas siguen el [modelo C4](https://c4model.com/) y fueron generados con
+[Structurizr Lite](https://structurizr.com/help/lite).
+El modelo fuente está en [`docs/architecture/workspace.dsl`](../docs/architecture/workspace.dsl).
+
+### Nivel 1 — Contexto del sistema
+
+> Muestra los actores externos (Atleta, Servicio de Mapas, API de Geolocalización)
+> y su relación de alto nivel con la plataforma RaceFlow.
+
+![Diagrama de Contexto](https://raw.githubusercontent.com/RaceFlowECI/.github/main/docs/architecture/export/structurizr-Contexto.png)
+
+### Nivel 2 — Contenedores
+
+> Desglosa el sistema en sus contenedores desplegables:
+> la SPA React, el API Gateway, los 5 microservicios Spring Boot,
+> Redis, RabbitMQ y las 4 bases de datos PostgreSQL.
+
+![Diagrama de Contenedores](https://raw.githubusercontent.com/RaceFlowECI/.github/main/docs/architecture/export/structurizr-Contenedores.png)
+
+### Nivel 3 — Componentes del Realtime Service
+
+> Zoom en el servicio más crítico de RaceFlow.
+> Muestra los componentes internos: `RoomWebSocketHandler`, `PositionIngestor`,
+> `RankingService`, `RankingStrategy` (Strategy pattern), `RoomStateClient` y `EventPublisher`.
+
+![Diagrama de Componentes — Realtime Service](https://raw.githubusercontent.com/RaceFlowECI/.github/main/docs/architecture/export/structurizr-Componentes_Realtime.png)
+
+> Para editar los diagramas, ver [`docs/architecture/README.md`](../docs/architecture/README.md).
