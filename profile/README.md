@@ -114,3 +114,26 @@ El modelo fuente está en [`docs/architecture/workspace.dsl`](../docs/architectu
 ![Diagrama de Componentes — Realtime Service](https://raw.githubusercontent.com/RaceFlowECI/.github/main/docs/architecture/export/structurizr-Componentes_Realtime.png)
 
 > Para editar los diagramas, ver [`docs/architecture/README.md`](../docs/architecture/README.md).
+
+---
+
+## Observabilidad
+
+El laboratorio de observabilidad instrumenta los 6 microservicios con la tríada:
+**métricas + logs + trazas**.
+
+| Pilar | Tecnología | Detalle |
+|---|---|---|
+| Métricas | Micrometer → Prometheus | Endpoint `/actuator/prometheus` en cada servicio. SLO: ranking p99 ≤ 1 s |
+| Logs | Logstash Logback Encoder → Loki | JSON estructurado con rotación diaria. Consultas con LogQL |
+| Trazas | OpenTelemetry Java Agent → Tempo | Adjunto vía Dockerfile multi-stage en api-gateway, room y realtime |
+
+**3 alertas activas:**
+
+| Alerta | Condición | Severidad |
+|---|---|---|
+| `RaceFlowServiceDown` | `up == 0` por 1 min | critical |
+| `RaceFlowHighErrorRate` | 5xx > 5% por 2 min | warning |
+| `RaceFlowRankingLatencyHigh` | ranking p99 > 1 s por 3 min | critical |
+
+Documentación completa: [`raceflow-observability/OBSERVABILIDAD.md`](https://github.com/RaceFlowECI/raceflow-observability/blob/develop/OBSERVABILIDAD.md)
