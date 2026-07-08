@@ -3,6 +3,10 @@
 Diagramas de arquitectura del sistema usando el [modelo C4](https://c4model.com/)
 y [Structurizr Lite](https://structurizr.com/help/lite).
 
+> Para el mapeo de los estilos de comunicación distribuida (sockets, HTTP, RMI, gRPC,
+> microservicios, API Gateway) contra la arquitectura real de RaceFlow, ver
+> [EVOLUCION_ARQUITECTONICA.md](EVOLUCION_ARQUITECTONICA.md).
+
 ## Diagramas exportados
 
 ### Nivel 1 — Contexto del sistema
