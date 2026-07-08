@@ -194,6 +194,12 @@ curl http://localhost:8080/actuator/health   # api-gateway    -> {"status":"UP"}
 
 ## Qué mostrar en la demo
 
+> Versiones ampliadas y listas para usar durante la presentación:
+> [`docs/demo/DEMO_CHECKLIST.md`](../docs/demo/DEMO_CHECKLIST.md) (guion paso a paso con
+> checkboxes y comandos copy-paste) y
+> [`docs/demo/GUIA_DEFENSA.md`](../docs/demo/GUIA_DEFENSA.md) (flujo explicado en lenguaje
+> llano + preguntas frecuentes de arquitectura con respuestas).
+
 1. **Registro/login real** en http://localhost:5173 — abrir DevTools → Network para que se vea
    la llamada HTTP real al backend (no datos mockeados).
 2. **Crear una sala** → mapa Leaflet con tu posición GPS real (o el aviso de fallback si no das
