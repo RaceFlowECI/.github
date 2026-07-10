@@ -145,7 +145,23 @@ Ese es TODO el sistema. Todo lo demás (Gateway, CI/CD, tests) es infraestructur
 > `realtime-service` a varias instancias en el futuro sin que cada una tenga su propia versión
 > del ranking.
 
-**"¿Qué pasaría si tuvieras más tiempo, qué le faltaría?"**
+**"¿Tiene balanceo de cargas? ¿Cómo funciona?"**
+
+> Sí, en producción. El plan de Azure App Service corre con **2 instancias físicas** (workers) y
+> el balanceador L7 integrado de la plataforma reparte las peticiones entrantes entre ellas — no
+> hubo que provisionar un balanceador aparte. Cinco de los seis servicios (gateway, auth, room,
+> session, metrics) corren balanceados en las 2 instancias, sin sesiones pegajosas, porque son
+> *stateless*: todo su estado vive en PostgreSQL, Redis o RabbitMQ, así que cualquier instancia
+> puede atender cualquier petición.
+>
+> La parte que más vale explicar es la excepción: `realtime-service` está **deliberadamente
+> fijado a 1 instancia** (con *per-site scaling* del plan). Guarda el estado vivo de las salas en
+> memoria — si corriera en 2 instancias, dos atletas de la misma sala podrían caer en máquinas
+> distintas y no verse entre sí. Esto conecta con la pregunta anterior del estado: el balanceador
+> expone exactamente la diferencia entre servicios stateless (escalan horizontal gratis) y
+> stateful (hay que sacar el estado del proceso primero). El camino para balancearlo también está
+> definido: mover el estado de salas a Redis y propagar las posiciones por RabbitMQ; con eso
+> dejaría de ser stateful y escalaría como los demás.
 
 > Buena respuesta honesta: room-service, session-service y metrics-service tienen toda la
 > infraestructura (CI/CD, conexión a su base de datos) pero no tienen lógica de negocio
