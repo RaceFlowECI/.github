@@ -33,7 +33,7 @@ Ningún artefacto se despliega manualmente: el pipeline compila, ejecuta pruebas
 
 | Recurso | Tipo | Notas |
 |---|---|---|
-| `raceflow-asp` | App Service Plan (Linux, **Basic B3**) | Aloja las 6 apps backend. Empezó en B1, se subió a B2 y finalmente a B3 (~7 GB RAM) porque 6 JVMs de Spring Boot concurrentes saturaban los tiers menores (memoria al 90-98%). |
+| `raceflow-asp` | App Service Plan (Linux, **Basic B3 × 2 workers**, per-site scaling) | Aloja las 6 apps backend en 2 instancias físicas con balanceo de cargas (ver sección "Balanceo de cargas"). Empezó en B1, se subió a B2 y finalmente a B3 (~7 GB RAM por worker) porque 6 JVMs de Spring Boot concurrentes saturaban los tiers menores (memoria al 90-98%). |
 | `raceflow-gateway` | Web App (Java 21) | Puerto 8080. Spring Cloud Gateway (WebFlux). |
 | `raceflow-auth-svc` | Web App (Java 21) | Puerto 8081. También expone gRPC interno en 9090. |
 | `raceflow-room-svc` | Web App (Java 21) | Puerto 8082. |
@@ -94,6 +94,41 @@ Decisión evaluada explícitamente:
 - **Mismo patrón de CI/CD**: GitHub Actions → Azure, idéntico a los 6 microservicios.
 - **Costo**: tier Free (CDN global, SSL, 100 GB/mes) dentro de la misma suscripción de estudiante.
 - Vercel/Netlify/Firebase Hosting son plataformas robustas y válidas, pero su ventaja (DX para Next.js, ecosistema propio) no aplica aquí y habrían introducido un segundo proveedor sin necesidad técnica.
+
+## Balanceo de cargas
+
+El plan `raceflow-asp` corre con **2 workers** (2 instancias físicas) y `perSiteScaling`
+habilitado, lo que permite decidir por servicio en cuántas instancias corre:
+
+| Servicio | Instancias | Razón |
+|---|---|---|
+| gateway, auth, room, session, metrics | **2** | Son *stateless* (todo su estado vive en PostgreSQL/Redis/RabbitMQ), así que cualquier instancia puede atender cualquier petición. |
+| realtime-service | **1** (fijado) | Guarda el estado vivo de las salas **en memoria** (`ConcurrentHashMap` + sesiones WebSocket). Con 2 instancias, dos atletas de la misma sala podrían caer en instancias distintas y no verse. |
+
+**Quién balancea**: el front-end de Azure App Service — un balanceador L7 integrado que
+distribuye las peticiones entrantes entre las instancias sanas de cada app. No hay que
+provisionar ni configurar un recurso aparte (a diferencia de un Application Gateway o un
+Load Balancer clásico). `clientAffinityEnabled` está en `false` en los servicios stateless:
+sin sesiones pegajosas, cada petición puede ir a cualquier instancia, que es la distribución
+más pareja posible y es seguro precisamente porque son stateless.
+
+**Cómo se configuró**:
+
+```bash
+az appservice plan update --name raceflow-asp -g rg-raceflow-prod \
+  --number-of-workers 2 --set perSiteScaling=true
+az webapp config set --name <app> -g rg-raceflow-prod --number-of-workers 2   # las 5 stateless
+az webapp config set --name raceflow-realtime-svc -g rg-raceflow-prod --number-of-workers 1
+```
+
+**Verificación**: `az webapp list-instances` muestra las 2 instancias del plan; los 6 servicios
+reportan `{"status":"UP"}` tras el escalado y la memoria promedio quedó en ~65-75% entre ambos
+workers.
+
+**Camino para escalar realtime-service** (documentado, no implementado): mover el estado de las
+salas de la memoria a Redis (el ranking ya se cachea ahí) y publicar los eventos de posición por
+RabbitMQ para que todas las instancias vean las actualizaciones — con eso dejaría de ser
+stateful y podría correr en N instancias como los demás.
 
 ## Configuración crítica por servicio (App Settings)
 
