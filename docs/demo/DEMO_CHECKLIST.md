@@ -15,6 +15,23 @@ docker ps                                     # postgres, redis, rabbitmq -> Up
 
 Si algo NO responde `UP`, ir a la sección **"Levantar todo desde cero"** al final de este archivo.
 
+**Si la demo es contra producción (Azure)**, verificar también:
+
+```bash
+# Los backend deben responder {"status":"UP"} (mirar el CUERPO, no solo el HTTP 200):
+curl https://raceflow-gateway-g8csc0dfh0dxhcax.mexicocentral-01.azurewebsites.net/actuator/health
+curl https://raceflow-auth-svc-etcwe5asgrhtfqad.mexicocentral-01.azurewebsites.net/actuator/health
+curl https://raceflow-realtime-svc-h4fvhydkd2gthheb.mexicocentral-01.azurewebsites.net/actuator/health
+```
+
+⚠️ **Verificar que el frontend muestre datos REALES, no maqueta** (lección aprendida: una vez
+producción sirvió la UI vieja con salas inventadas porque `develop` no se había promovido a
+`main` — con el CI en verde): abrir https://lively-rock-0066b1e0f.7.azurestaticapps.net, crear
+una sala y confirmar que el código que aparece **lo generó el backend** (cambia en cada
+creación). Si aparece una lista de "salas activas" precargada o atletas que nadie registró,
+producción está sirviendo código viejo → revisar que `main` de `raceflow-frontend` tenga el
+último merge de `develop`.
+
 ---
 
 ## 🎬 Guion de la demo (en orden)
@@ -113,6 +130,6 @@ npm run dev
 
 ## 📌 Notas rápidas por si preguntan
 
-- **Todos los repos están en `develop`** (ya mergeados): auth-service, realtime-service, api-gateway, frontend. `.github` (org profile + docs) está en `main`.
-- **No está desplegado en Azure/Vercel todavía** — la demo es 100% local. Backend apunta a Azure App Service (6 Web Apps creadas), frontend a Vercel, pero falta configurar variables de entorno y CORS de producción — eso queda para después de la entrega.
+- **Todo está promovido a `main` y desplegado en producción**: los 6 backend en Azure App Service y el frontend en Azure Static Web Apps (https://lively-rock-0066b1e0f.7.azurestaticapps.net), verificado end-to-end desde celular. Detalle completo en `docs/architecture/DESPLIEGUE.md`.
+- **La demo puede ser local o contra producción** — el flujo es idéntico. Ojo: en producción el gRPC realtime→auth usa el fallback (App Service no expone el puerto 9090 entre apps sin VNet), así que la prueba fuerte del gRPC (paso #4) conviene hacerla en local.
 - **Puertos**: Gateway 8080, Auth 8081 (REST) + 9090 (gRPC), Room 8082, Realtime 8083, Session 8084, Metrics 8085, Frontend 5173.
