@@ -150,11 +150,33 @@ Ese es TODO el sistema. Todo lo demás (Gateway, CI/CD, tests) es infraestructur
 > Buena respuesta honesta: room-service, session-service y metrics-service tienen toda la
 > infraestructura (CI/CD, conexión a su base de datos) pero no tienen lógica de negocio
 > implementada todavía — el foco de esta entrega fue el flujo completo de autenticación y
-> tiempo real. También falta desplegar todo en producción (Azure + Vercel) conectado entre sí;
-> localmente funciona completo, pero conectar los servicios en la nube requiere configurar
-> variables de entorno y, para el gRPC específicamente, resolver que Azure App Service expone
-> solo un puerto público por app — necesitaría una red privada (VNet) para que el gRPC funcione
-> entre dos App Services distintos.
+> tiempo real. El despliegue en producción ya está completo y verificado (los 6 servicios en
+> Azure App Service + frontend en Azure Static Web Apps; ver `docs/architecture/DESPLIEGUE.md`);
+> lo que sí queda pendiente del lado de infraestructura es el gRPC *entre* servicios en la nube:
+> Azure App Service expone solo un puerto público por app, así que para que realtime-service
+> resuelva nombres contra auth-service en producción haría falta una red privada (VNet). Hoy el
+> código lo maneja con el fallback: si el gRPC no responde, usa el nombre que envió el cliente.
+
+**"¿Cómo sabes que lo que está desplegado es la versión real y no una demo con datos falsos?"**
+*(lección real de este proyecto — úsala a tu favor)*
+
+> Me pasó de verdad y lo detecté probando: el primer despliegue del frontend mostraba salas y
+> atletas "hardcodeados" (inventados en el código). La causa no fue el pipeline — el CI estaba
+> verde — sino el flujo de ramas: la versión conectada al backend real se había fusionado a
+> `develop`, pero nunca se promovió a `main`, y producción despliega desde `main`. O sea que el
+> pipeline desplegaba, correctamente, código viejo.
+>
+> La corrección fue promover `develop` a `main` con un PR, y de paso eliminar la única sección
+> que seguía siendo maqueta (la lista de "salas activas", porque el backend aún no tiene un
+> endpoint para listar salas — preferí quitarla antes que mostrar datos falsos). Al pasar por el
+> pipeline, SonarCloud detectó además una vulnerabilidad real en el código promovido (el código
+> de sala y el token se insertaban en la URL del WebSocket sin validar) que corregí con
+> validación de formato y encoding antes de poder fusionar.
+>
+> La moraleja que puedo defender: "CI verde" no garantiza que producción tenga el código que
+> crees — hay que verificar el *contenido* desplegado (en este caso, probar el flujo real desde
+> un celular), y el Quality Gate del pipeline demostró su valor bloqueando una vulnerabilidad
+> justo cuando el código real iba camino a producción.
 
 ---
 
