@@ -130,6 +130,41 @@ salas de la memoria a Redis (el ranking ya se cachea ahí) y publicar los evento
 RabbitMQ para que todas las instancias vean las actualizaciones — con eso dejaría de ser
 stateful y podría correr en N instancias como los demás.
 
+## Laboratorio: Alta disponibilidad y escalabilidad con Azure Load Balancer (IaaS)
+
+Réplica en Azure de los laboratorios del curso hechos en AWS ("Alta Disponibilidad con
+Application Load Balancer" y "Escalabilidad"), en un grupo de recursos aparte
+(`rg-raceflow-lab`) que no toca RaceFlow. Demuestra los mismos conceptos una capa más abajo
+(IaaS) de donde vive RaceFlow (PaaS):
+
+| Concepto del lab (AWS) | Implementación en Azure |
+|---|---|
+| EC2 | VM Scale Set `raceflow-lab-vmss` (2× Standard_B1s, Ubuntu 22.04 + nginx) |
+| Application Load Balancer | **Azure Load Balancer Standard** `raceflow-lab-lb` (IP pública 68.155.157.45) |
+| Target Group | Backend Pool `lab-backend-pool` |
+| Health Check | Health Probe HTTP `/` cada 5s |
+| Auto Scaling Group + CloudWatch | Autoscale `lab-autoscale`: CPU>70% (5min) → 3 instancias; CPU<30% → 2 |
+| Security Group | NSG `raceflow-lab-vmssNSG` (regla `allow-http` puerto 80) |
+
+**Verificación realizada**: `curl` consecutivos a la IP del balanceador alternan entre
+`Instancia racef33db000000` e `Instancia racef33db000001` (cada instancia sirve una página con
+su hostname) — la misma evidencia que pedía el lab de AWS al recargar el navegador.
+
+**Nota conceptual**: Azure Load Balancer es L4 (reparte conexiones TCP por hash de 5-tupla),
+mientras el ALB de AWS es L7. El equivalente L7 exacto en Azure es Application Gateway
+(descartado por costo, ~$6/día). En RaceFlow (PaaS) este balanceo lo hace el front-end
+integrado de App Service — este laboratorio muestra cómo se construye a mano lo que la
+plataforma da hecho.
+
+**Diagnóstico curioso durante el montaje**: el health probe marcaba las instancias como no
+sanas aunque nginx respondía. El access log reveló `GET /C:/Program%20Files/Git/` — Git Bash
+(MSYS) convirtió el path `/` del probe en una ruta de Windows al crearlo por CLI. Se corrigió
+recreando el probe con `MSYS_NO_PATHCONV=1`. Lección: cuidado con la conversión de paths de
+Git Bash al pasar argumentos que empiezan por `/` a CLIs de Windows.
+
+**Costo y ciclo de vida**: ~$1.30/día mientras exista. Todo el laboratorio se elimina con
+`az group delete --name rg-raceflow-lab` sin afectar RaceFlow.
+
 ## Configuración crítica por servicio (App Settings)
 
 Cada Web App define, entre otras:
