@@ -3,7 +3,7 @@ workspace "RaceFlow" "Salas de entrenamiento colaborativas en tiempo real para d
     !identifiers hierarchical
 
     model {
-        athlete = person "Atleta" "Crea o se une a salas, transmite GPS en vivo, ve mapa y ranking, envía reacciones y consulta su historial."
+        athlete = person "Atleta" "Crea o se une a salas, transmite GPS en vivo, ve mapa y ranking, habla por el chat de voz del grupo y consulta su historial."
 
         mapsService = softwareSystem "Servicio de Mapas" "Provee los tiles del mapa para visualizar posiciones en vivo (Leaflet + OpenStreetMap)." {
             tags "External"
@@ -15,22 +15,22 @@ workspace "RaceFlow" "Salas de entrenamiento colaborativas en tiempo real para d
 
         raceflow = softwareSystem "RaceFlow" "Plataforma web de salas de entrenamiento colaborativas en tiempo real para deportes de cronometraje." {
 
-            webapp = container "Web Application" "Interfaz del atleta: mapa en vivo, ranking, reacciones, registro, perfil e historial." "React + TypeScript + Leaflet.js" {
+            webapp = container "Web Application" "Interfaz del atleta: mapa en vivo, ranking, chat de voz (WebRTC P2P), registro e historial. Servida desde Azure Static Web Apps." "React + TypeScript + Leaflet.js" {
                 tags "Web Browser"
             }
 
-            gateway = container "API Gateway" "Punto de entrada único. Enruta peticiones REST y conexiones WebSocket, valida el JWT. Replicado para no ser punto único de falla." "Spring Cloud Gateway"
+            gateway = container "API Gateway" "Punto de entrada REST (/api/**). Replicado en 2 workers tras el balanceador L7 integrado de App Service." "Spring Cloud Gateway"
 
-            authService = container "Auth Service" "Registro, inicio de sesión y emisión de tokens JWT." "Java 21 + Spring Boot"
+            authService = container "Auth Service" "Registro, login, JWT (con claim name) y servidor gRPC interno :9090 (UserProfileService)." "Java 21 + Spring Boot"
             roomService = container "Room Service" "Ciclo de vida de salas: creación, ingreso por código, participantes." "Java 21 + Spring Boot"
 
-            realtimeService = container "Realtime / Ranking Service" "Recibe posiciones GPS por WebSocket, recalcula el ranking y difunde a los participantes. Escala horizontalmente." "Java 21 + Spring Boot + spring-websocket" {
-                wsHandler = component "RoomWebSocketHandler" "Gestiona las conexiones WebSocket de cada sala: recibe posiciones y reacciones, difunde (broadcast) a los participantes suscritos." "Spring WebSocket Handler"
-                positionController = component "PositionIngestor" "Valida cada posición GPS entrante (descarta saltos imposibles o datos manipulados) antes de procesarla." "Spring Component"
+            realtimeService = container "Realtime / Ranking Service" "Recibe posiciones GPS por WebSocket, recalcula el ranking, lo difunde, y releva la señalización del chat de voz WebRTC. Fijado a 1 instancia (estado de salas en memoria)." "Java 21 + Spring Boot + spring-websocket" {
+                wsHandler = component "RoomWebSocketHandler" "Conexiones WebSocket de cada sala: posiciones GPS, broadcast de ranking y señalización de voz (VOICE_JOIN/LEAVE/OFFER/ANSWER/ICE relevada al peer destino, con anti-suplantación)." "Spring WebSocket Handler"
+                roomManager = component "RoomManager" "Estado de salas en memoria (ConcurrentHashMap); resuelve el nombre autoritativo del atleta vía gRPC con fallback." "Spring Service"
                 rankingService = component "RankingService" "Recalcula el ranking de la sala ante cada posición. Usa la estrategia de ranking según el deporte." "Spring Service"
                 rankingStrategy = component "RankingStrategy" "Interfaz de cálculo de ranking. Implementaciones intercambiables por deporte (distancia, velocidad)." "Strategy (interfaz)"
-                roomStateClient = component "RoomStateClient" "Lee y actualiza el estado de sala y el ranking en Redis con operaciones atómicas; fuente única entre réplicas." "Spring Data Redis"
-                eventPublisher = component "EventPublisher" "Publica eventos de dominio (sesión finalizada, reacciones) en el broker." "Spring AMQP"
+                grpcAuthClient = component "GrpcAuthClient" "Cliente gRPC hacia auth-service (UserProfileService); timeout 2s y fallback al nombre del cliente." "grpc-java"
+                authInterceptor = component "WebSocketAuthInterceptor" "Valida el JWT en el handshake del WebSocket (?token=)." "HandshakeInterceptor"
             }
 
             sessionService = container "Session / History Service" "Persiste las sesiones finalizadas y permite consultar el historial." "Java 21 + Spring Boot"
@@ -67,11 +67,11 @@ workspace "RaceFlow" "Salas de entrenamiento colaborativas en tiempo real para d
         athlete -> raceflow.webapp "Accede desde el navegador" "HTTPS"
         raceflow.webapp -> mapsService "Solicita tiles del mapa" "HTTPS"
         raceflow.webapp -> raceflow.gateway "Peticiones REST (registro, salas, historial, KPIs)" "JSON/HTTPS"
-        raceflow.webapp -> raceflow.gateway "Canal de tiempo real: posiciones, ranking, reacciones" "WebSocket"
+        raceflow.webapp -> raceflow.realtimeService "Canal de tiempo real DIRECTO: posiciones, ranking, señalización de voz" "WebSocket (WSS)"
 
         raceflow.gateway -> raceflow.authService "Enruta autenticación" "JSON/HTTPS"
-        raceflow.gateway -> raceflow.roomService "Enruta gestión de salas" "JSON/HTTPS"
-        raceflow.gateway -> raceflow.realtimeService "Enruta el canal de tiempo real" "WebSocket"
+        raceflow.gateway -> raceflow.realtimeService "Enruta gestión de salas (/api/rooms/**)" "JSON/HTTPS"
+        raceflow.realtimeService -> raceflow.authService "Consulta el nombre autoritativo del atleta (con fallback)" "gRPC :9090"
         raceflow.gateway -> raceflow.sessionService "Enruta consultas de historial" "JSON/HTTPS"
         raceflow.gateway -> raceflow.metricsService "Enruta consultas de KPIs" "JSON/HTTPS"
 
@@ -88,14 +88,14 @@ workspace "RaceFlow" "Salas de entrenamiento colaborativas en tiempo real para d
         raceflow.broker -> raceflow.metricsService "Entrega eventos para actualizar KPIs" "AMQP"
 
         // ----- Relaciones de componentes (Nivel 3) -----
-        raceflow.webapp -> raceflow.realtimeService.wsHandler "Emite posiciones y reacciones; recibe ranking y posiciones" "WebSocket"
-        raceflow.realtimeService.wsHandler -> raceflow.realtimeService.positionController "Entrega la posición entrante para validar"
-        raceflow.realtimeService.positionController -> raceflow.realtimeService.rankingService "Envía la posición válida para recalcular el ranking"
+        raceflow.webapp -> raceflow.realtimeService.authInterceptor "Handshake WebSocket con JWT" "WSS"
+        raceflow.realtimeService.authInterceptor -> raceflow.realtimeService.wsHandler "Conexión autenticada"
+        raceflow.realtimeService.wsHandler -> raceflow.realtimeService.roomManager "Registra sesiones y consulta salas"
+        raceflow.realtimeService.wsHandler -> raceflow.realtimeService.rankingService "Recalcula el ranking ante cada posición"
         raceflow.realtimeService.rankingService -> raceflow.realtimeService.rankingStrategy "Calcula el orden según el deporte"
-        raceflow.realtimeService.rankingService -> raceflow.realtimeService.roomStateClient "Lee/actualiza estado y ranking"
-        raceflow.realtimeService.roomStateClient -> raceflow.redis "Operaciones atómicas sobre el estado de sala" "Redis protocol"
-        raceflow.realtimeService.wsHandler -> raceflow.realtimeService.eventPublisher "Notifica sesión finalizada / reacciones"
-        raceflow.realtimeService.eventPublisher -> raceflow.broker "Publica eventos de dominio" "AMQP"
+        raceflow.realtimeService.rankingService -> raceflow.redis "Cachea el ranking (TTL 1h)" "Redis protocol"
+        raceflow.realtimeService.roomManager -> raceflow.realtimeService.grpcAuthClient "Resuelve el nombre autoritativo"
+        raceflow.realtimeService.grpcAuthClient -> raceflow.authService "UserProfileService.getProfile(email)" "gRPC :9090"
     }
 
     views {
