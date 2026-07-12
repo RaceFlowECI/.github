@@ -185,6 +185,32 @@ Ese es TODO el sistema. Todo lo demás (Gateway, CI/CD, tests) es infraestructur
 > definido: mover el estado de salas a Redis y propagar las posiciones por RabbitMQ; con eso
 > dejaría de ser stateful y escalaría como los demás.
 
+**"¿Qué pasa si una de las instancias falla? / ¿Cómo detecta el balanceador que una instancia está mala?"**
+
+> Con **health checks por instancia**: los 6 servicios tienen configurado el Health Check de App
+> Service apuntando a `/actuator/health`. Esa ruta no dice solo "el proceso está vivo" — agrega
+> el estado de las dependencias reales: si el servicio perdió la conexión a PostgreSQL, Redis o
+> RabbitMQ, el health check reporta `DOWN`. La plataforma consulta esa ruta **cada minuto en cada
+> instancia por separado**: si una instancia responde mal, el balanceador **la saca de rotación**
+> (el tráfico sigue fluyendo solo por la sana) y si no se recupera, App Service la reinicia.
+>
+> Es el patrón clásico de alta disponibilidad — balanceador + health checks + reemplazo de
+> instancias enfermas — el mismo que se practica en los laboratorios del curso, aplicado aquí al
+> proyecto real. Y un detalle fino: este mismo endpoint fue el que me permitió diagnosticar los
+> problemas del despliegue (un `DOWN` me dijo exactamente que faltaban las credenciales de
+> RabbitMQ, no "algo falla").
+
+**"¿Y el auto-escalado? ¿Si llegan muchos usuarios, escala solo?"**
+
+> Hoy el escalado es **manual** (un comando cambia el número de instancias) y es una decisión de
+> costos, no de arquitectura: las reglas de auto-escalado por métrica (CPU > 70% → agregar
+> instancia) requieren el tier Standard de App Service, que cuesta el doble contra mi crédito de
+> estudiante. La arquitectura ya está lista para autoscale — los servicios son stateless y el
+> balanceador incorpora instancias nuevas automáticamente — así que activarlo sería solo el
+> cambio de tier más una regla de Azure Monitor. De hecho, esa regla exacta la implementé y
+> probé en un laboratorio IaaS aparte (VM Scale Set con autoscale CPU>70% → 3.ª instancia), así
+> que el concepto está demostrado, no solo enunciado.
+
 > Buena respuesta honesta: room-service, session-service y metrics-service tienen toda la
 > infraestructura (CI/CD, conexión a su base de datos) pero no tienen lógica de negocio
 > implementada todavía — el foco de esta entrega fue el flujo completo de autenticación y
