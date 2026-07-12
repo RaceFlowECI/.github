@@ -24,7 +24,7 @@ Ese es TODO el sistema. Todo lo demás (Gateway, CI/CD, tests) es infraestructur
 
 ---
 
-## 2. Por qué tres formas de comunicación distintas (esto es lo que más preguntan)
+## 2. Por qué cuatro formas de comunicación distintas (esto es lo que más preguntan)
 
 **Pregunta esperada: "¿Por qué no usaste solo REST para todo?"**
 
@@ -33,6 +33,28 @@ Ese es TODO el sistema. Todo lo demás (Gateway, CI/CD, tests) es infraestructur
 > - **REST (HTTP)** — para operaciones puntuales tipo pregunta-respuesta: "regístrame", "crea una sala". El navegador pide algo, el servidor responde, se acaba. Es lo único que un navegador puede hablar sin código especial.
 > - **WebSocket** — para datos que cambian todo el tiempo (posición GPS, ranking). Con REST tendrías que estar preguntando "¿hay algo nuevo?" cada segundo (polling), lo cual es ineficiente. WebSocket deja la conexión abierta y el servidor empuja los datos apenas cambian.
 > - **gRPC** — para que los servicios se hablen *entre ellos*, nunca con el navegador. Es más rápido que REST porque usa un formato binario (Protocol Buffers) en vez de JSON de texto, y obliga a definir un contrato estricto (`.proto`) — no puedes mandar cualquier cosa, tiene que cumplir el formato exacto.
+> - **WebRTC** — para el chat de voz entre atletas. Es el único de los cuatro donde los datos NO pasan por mi servidor: el audio fluye directo de navegador a navegador (peer-to-peer). Mandar audio en vivo por el servidor duplicaría la latencia y me costaría ancho de banda; WebRTC es el estándar del navegador para media en tiempo real (es lo que usan Meet y Discord).
+
+**Pregunta esperada: "¿Cómo funciona la llamada de voz? ¿El audio pasa por tu servidor?"**
+
+> No — y esa es la gracia. WebRTC necesita dos cosas: (1) que los dos navegadores negocien cómo
+> conectarse (qué códecs, qué direcciones IP/puertos pueden usar), y (2) el canal de audio en sí.
+> La negociación — que se llama **señalización** — viaja por el **WebSocket autenticado que ya
+> tenía** la sala: un peer manda su "oferta" (SDP), el otro responde, e intercambian candidatos
+> de red (ICE) que descubren con un servidor STUN público. Mi servidor solo **reenvía esos
+> mensajes al destinatario correcto** — nunca ve ni toca el audio. Una vez negociado, el audio
+> va directo entre los dos dispositivos.
+>
+> Dos detalles finos que puedo defender:
+> - **Anti-suplantación**: el campo "de quién viene" cada mensaje de señalización lo estampa el
+>   servidor con la identidad del JWT de la conexión — un cliente no puede fingir ser otro atleta.
+> - **Glare avoidance**: si dos peers intentan llamarse al mismo tiempo, la negociación choca.
+>   Lo resolví con una regla determinista: en cada par, solo inicia la oferta quien tenga el
+>   email lexicográficamente menor; el otro solo responde.
+>
+> Limitación conocida (honesta): con solo STUN, si ambos dispositivos están detrás de NAT
+> corporativo muy restrictivo el P2P puede no conectar; la solución completa es un servidor
+> TURN que haga de relay — documentado como mejora futura, no necesario en redes normales.
 
 **Pregunta esperada: "¿Por qué no usaste sockets crudos o RMI, si los vimos en el taller?"**
 
@@ -212,6 +234,9 @@ Ese es TODO el sistema. Todo lo demás (Gateway, CI/CD, tests) es infraestructur
 | **Haversine** | Fórmula matemática para calcular distancia entre dos coordenadas GPS sobre la superficie de la Tierra |
 | **Redis** | Base de datos en memoria, muy rápida, usada aquí para cachear el ranking calculado |
 | **RabbitMQ** | Sistema de mensajería para comunicación asíncrona entre servicios (infraestructura lista, no consumida activamente aún) |
+| **WebRTC** | Estándar del navegador para audio/video en tiempo real directo entre dos clientes (P2P), sin pasar por el servidor |
+| **Señalización** | El intercambio previo entre dos peers WebRTC para acordar cómo conectarse (ofertas SDP + candidatos ICE); aquí viaja por el WebSocket de la sala |
+| **STUN** | Servidor que le dice a cada navegador cuál es su dirección pública en internet, para que dos peers detrás de routers puedan encontrarse |
 
 ---
 
