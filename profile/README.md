@@ -1,6 +1,12 @@
+<p align="center">
+  <img src="https://raw.githubusercontent.com/RaceFlowECI/.github/main/docs/architecture/img/logo-raceflow.png" alt="RaceFlow" width="220" />
+</p>
+
 # RaceFlowECI
 
 > Organización GitHub del proyecto **RaceFlow** — ECI · Arquitecturas de Software (ARSW)
+
+🌐 **En producción**: [lively-rock-0066b1e0f.7.azurestaticapps.net](https://lively-rock-0066b1e0f.7.azurestaticapps.net) — sistema completo desplegado en Azure (6 microservicios + frontend), detalle en [`docs/architecture/DESPLIEGUE.md`](../docs/architecture/DESPLIEGUE.md).
 
 ---
 
@@ -23,7 +29,7 @@ para deportes de cronometraje (ciclismo, atletismo, triatlón).
 
 Los atletas crean o se unen a salas mediante un código, transmiten su posición GPS en vivo
 desde el navegador, ven un mapa compartido con todos los participantes, consultan el ranking
-actualizado al instante y envían reacciones durante la sesión.
+actualizado al instante y hablan por el chat de voz del grupo (WebRTC P2P) durante la sesión.
 
 Al finalizar, cada sesión queda persistida y disponible como historial para análisis posterior.
 
@@ -88,10 +94,10 @@ de la Escuela Colombiana de Ingeniería Julio Garavito.
 
 ## Cómo ejecutar la demo localmente
 
-> ⚠️ **Importante**: la lógica de negocio (registro/login, salas, WebSocket, ranking, Gateway,
-> gRPC interno) todavía vive en **ramas feature abiertas**, no en `develop`. Hasta que esos PRs
-> se mergeen, hay que clonar y hacer checkout a las ramas indicadas abajo — `develop`/`main`
-> por sí solos no levantan la demo completa.
+> ✅ **Actualización**: todo está mergeado a `main` y desplegado en producción. La demo puede
+> hacerse directo contra producción (URL arriba) o localmente clonando `main` de cada repo —
+> las instrucciones de ramas feature de abajo quedaron obsoletas y se conservan solo como
+> referencia histórica del proceso.
 
 ### 0. Requisitos
 
@@ -247,8 +253,9 @@ El modelo fuente está en [`docs/architecture/workspace.dsl`](../docs/architectu
 ### Nivel 3 — Componentes del Realtime Service
 
 > Zoom en el servicio más crítico de RaceFlow.
-> Muestra los componentes internos: `RoomWebSocketHandler`, `PositionIngestor`,
-> `RankingService`, `RankingStrategy` (Strategy pattern), `RoomStateClient` y `EventPublisher`.
+> Muestra los componentes internos reales: `WebSocketAuthInterceptor`, `RoomWebSocketHandler`
+> (posiciones + señalización de voz), `RoomManager`, `RankingService`, `RankingStrategy`
+> (Strategy pattern) y `GrpcAuthClient`.
 
 ![Diagrama de Componentes — Realtime Service](https://raw.githubusercontent.com/RaceFlowECI/.github/main/docs/architecture/export/structurizr-Componentes_Realtime.png)
 
