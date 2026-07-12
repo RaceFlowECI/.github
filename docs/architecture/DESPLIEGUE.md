@@ -130,6 +130,27 @@ salas de la memoria a Redis (el ranking ya se cachea ahí) y publicar los evento
 RabbitMQ para que todas las instancias vean las actualizaciones — con eso dejaría de ser
 stateful y podría correr en N instancias como los demás.
 
+**Health checks (alta disponibilidad a nivel de instancia)**: los 6 servicios tienen configurado
+el *Health Check* de App Service apuntando a `/actuator/health` (que agrega el estado de
+PostgreSQL, Redis y RabbitMQ). La plataforma consulta esa ruta cada minuto **en cada instancia**:
+si una instancia responde mal, el balanceador **la saca de rotación** (el tráfico sigue fluyendo
+por la instancia sana) y App Service la reinicia si no se recupera. Es el mismo mecanismo
+target-group + health check del patrón clásico de alta disponibilidad, provisto por la
+plataforma:
+
+```bash
+az webapp config set --name <app> -g rg-raceflow-prod \
+  --generic-configurations '{"healthCheckPath": "/actuator/health"}'
+```
+
+**Auto-escalado (decisión de alcance)**: las reglas de autoscale por métrica (p. ej. CPU>70% →
+agregar instancia) requieren tier **Standard** en App Service; en Basic el escalado es manual
+(`--number-of-workers N`). Decisión tomada: quedarse en B3 con escalado manual por costo
+(Standard ≈ 2× el precio contra el crédito de estudiante); la arquitectura ya lo soporta — los
+servicios son stateless y el balanceo es automático — así que activar autoscale sería solo el
+cambio de tier + una regla de Azure Monitor, como la demostrada en el laboratorio IaaS
+(`rg-raceflow-lab`, autoscale CPU>70% en el VMSS).
+
 ## Laboratorio: Alta disponibilidad y escalabilidad con Azure Load Balancer (IaaS)
 
 Réplica en Azure de los laboratorios del curso hechos en AWS ("Alta Disponibilidad con
