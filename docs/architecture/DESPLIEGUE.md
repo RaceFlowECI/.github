@@ -86,6 +86,26 @@ Ramas: `feature/*` → PR a `develop` → PR `develop` → `main`. El deploy sol
 
 Los PRs generan **entornos de preview** efímeros que se destruyen al cerrar el PR. `staticwebapp.config.json` define el fallback SPA (`/index.html`) para que las rutas de React Router funcionen al recargar.
 
+### Optimización de assets estáticos (logo)
+
+El logo de marca (`public/logo.png`, usado en el login) y el favicon se generaron con **Python +
+Pillow** a partir del arte original (1024×1024, 1.4 MB) — demasiado pesado para servirlo tal
+cual en una app móvil, cuando el bundle de JS completo de la app pesa ~104 KB gzipped.
+
+```python
+from PIL import Image
+img = Image.open("icono-front.png")
+img.resize((512, 512), Image.LANCZOS).save("public/logo.png", optimize=True)     # -> 120 KB
+img.resize((64, 64), Image.LANCZOS).save("public/favicon.png", optimize=True)    # -> 4 KB
+```
+
+- **Tamaño de salida**: regla de ~2× el tamaño de despliegue (pantallas de alta densidad). El
+  logo se muestra a 110px en el login → 512px alcanza; el favicon se ve a 16-32px → 64px basta.
+- **`Image.LANCZOS`**: algoritmo de remuestreo que conserva mejor bordes y detalle al reducir,
+  frente a alternativas más rápidas pero borrosas (nearest, bilinear).
+- **`optimize=True`**: compresión PNG sin pérdida (mismo píxel a píxel, menos bytes) — el
+  codificador prueba varias configuraciones y se queda con la más compacta.
+
 ## Justificación: ¿por qué Azure Static Web Apps y no Vercel?
 
 Decisión evaluada explícitamente:
