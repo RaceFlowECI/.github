@@ -19,6 +19,8 @@ Esto es lo que tienes que poder decir de memoria, sin mirar nada:
 6. El navegador abre un **WebSocket** hacia `realtime-service` (conexión persistente, no HTTP normal) y empieza a mandar su posición GPS cada vez que se mueve
 7. `realtime-service` calcula la distancia recorrida (fórmula de Haversine, distancia entre dos coordenadas GPS) y recalcula el ranking de la sala
 8. `realtime-service` **difunde** el ranking actualizado a todos los que están conectados a esa sala por WebSocket — así todos ven lo mismo en tiempo real, sin refrescar la página
+9. Para entrar a una sala, el flujo principal es **social**: el atleta agrega **amigos** (solicitud → aceptación, persistido en Postgres por `auth-service`) y el creador de la sala los **invita**; al invitado le aparece la invitación en su pantalla de Salas y entra con un toque — sin teclear códigos (el código de 6 caracteres queda como opción manual secundaria)
+10. Durante la sesión, los atletas hablan por el **chat de voz** (WebRTC P2P — el audio va directo entre navegadores)
 
 Ese es TODO el sistema. Todo lo demás (Gateway, CI/CD, tests) es infraestructura alrededor de este flujo.
 
@@ -210,6 +212,27 @@ Ese es TODO el sistema. Todo lo demás (Gateway, CI/CD, tests) es infraestructur
 > cambio de tier más una regla de Azure Monitor. De hecho, esa regla exacta la implementé y
 > probé en un laboratorio IaaS aparte (VM Scale Set con autoscale CPU>70% → 3.ª instancia), así
 > que el concepto está demostrado, no solo enunciado.
+
+**"¿Cómo funciona lo de amigos e invitaciones? ¿Dónde se guarda cada cosa?"**
+
+> El reparto sigue la misma filosofía de estado del resto del sistema:
+>
+> - **Amistades → persistentes → Postgres en `auth-service`**: es el servicio dueño del dominio
+>   "usuarios", así que ahí vive la tabla `friendships` (solicitante, destinatario, estado
+>   PENDING/ACCEPTED, con restricción de unicidad por pareja). El ciclo completo: buscar
+>   atletas, enviar solicitud (validando que no exista ya en ninguna dirección), y solo el
+>   destinatario puede aceptar o rechazar.
+> - **Invitaciones a sala → efímeras → memoria en `realtime-service`**: una invitación apunta a
+>   una sala, y la sala vive en memoria — si la sala muere, la invitación pierde sentido, así
+>   que se guarda igual de efímera (al consultarlas, las que apuntan a salas muertas se
+>   descartan solas). El frontend las sondea cada 8 segundos y el invitado entra con un toque.
+>
+> Distinguir qué merece persistencia y qué no es una decisión deliberada, no una omisión: la
+> amistad sobrevive al reinicio del servidor; la invitación no debe sobrevivir a la sala. Y el
+> código de 6 caracteres no desapareció — quedó como identificador interno que viaja dentro de
+> la invitación, y como opción manual de respaldo en la UI.
+
+**"¿Qué pasaría si tuvieras más tiempo, qué le faltaría?"**
 
 > Buena respuesta honesta: room-service, session-service y metrics-service tienen toda la
 > infraestructura (CI/CD, conexión a su base de datos) pero no tienen lógica de negocio

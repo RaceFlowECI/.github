@@ -47,10 +47,15 @@ producción está sirviendo código viejo → revisar que `main` de `raceflow-fr
 - [ ] Aceptar permiso de ubicación del navegador
 - [ ] **Señalar**: el mapa Leaflet se centra en el GPS real, no en un punto fijo
 
-### 3. Tiempo real con dos usuarios
-- [ ] Copiar el código de la sala
-- [ ] Abrir ventana de incógnito, registrar otro usuario, unirse con el código
+### 3. Tiempo real con dos usuarios — flujo social (amigos + invitación)
+- [ ] Ventana de incógnito: registrar un segundo usuario
+- [ ] Usuario 2: **Salas → 👥 Amigos** → buscar al usuario 1 por nombre → "+ Agregar"
+- [ ] Usuario 1: **Salas → 👥 Amigos** → aparece la solicitud → "Aceptar"
+- [ ] Usuario 1 (dentro de su sala, pantalla Ranking): **"👥 Invitar amigos a esta sala"** → Invitar al usuario 2
+- [ ] Usuario 2: en Salas aparece el banner **"📩 [nombre] te invitó a su sala"** (se refresca solo, máx. 8 s) → **Unirse**
+- [ ] **Señalar**: entró sin teclear ningún código — amistades persistentes (Postgres/auth) + invitaciones efímeras (memoria/realtime); el código de 6 caracteres sigue disponible como opción manual de respaldo
 - [ ] **Señalar**: ambas ventanas ven los dos marcadores y el ranking sincronizado en vivo (WebSocket)
+- [ ] Bonus: ambos pulsan **"🎙 Unirse a la llamada"** en Ranking → chat de voz P2P (WebRTC) en vivo
 
 ### 4. 🔥 La prueba fuerte — gRPC interno funcionando de verdad
 
