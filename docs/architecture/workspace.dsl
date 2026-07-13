@@ -21,10 +21,10 @@ workspace "RaceFlow" "Salas de entrenamiento colaborativas en tiempo real para d
 
             gateway = container "API Gateway" "Punto de entrada REST (/api/**). Replicado en 2 workers tras el balanceador L7 integrado de App Service." "Spring Cloud Gateway"
 
-            authService = container "Auth Service" "Registro, login, JWT (con claim name) y servidor gRPC interno :9090 (UserProfileService)." "Java 21 + Spring Boot"
+            authService = container "Auth Service" "Registro, login, JWT (con claim name), amistades (solicitudes/aceptación, persistidas) y servidor gRPC interno :9090." "Java 21 + Spring Boot"
             roomService = container "Room Service" "Ciclo de vida de salas: creación, ingreso por código, participantes." "Java 21 + Spring Boot"
 
-            realtimeService = container "Realtime / Ranking Service" "Recibe posiciones GPS por WebSocket, recalcula el ranking, lo difunde, y releva la señalización del chat de voz WebRTC. Fijado a 1 instancia (estado de salas en memoria)." "Java 21 + Spring Boot + spring-websocket" {
+            realtimeService = container "Realtime / Ranking Service" "Posiciones GPS por WebSocket, ranking, señalización del chat de voz WebRTC e invitaciones a salas (en memoria, tan efímeras como la sala). Fijado a 1 instancia." "Java 21 + Spring Boot + spring-websocket" {
                 wsHandler = component "RoomWebSocketHandler" "Conexiones WebSocket de cada sala: posiciones GPS, broadcast de ranking y señalización de voz (VOICE_JOIN/LEAVE/OFFER/ANSWER/ICE relevada al peer destino, con anti-suplantación)." "Spring WebSocket Handler"
                 roomManager = component "RoomManager" "Estado de salas en memoria (ConcurrentHashMap); resuelve el nombre autoritativo del atleta vía gRPC con fallback." "Spring Service"
                 rankingService = component "RankingService" "Recalcula el ranking de la sala ante cada posición. Usa la estrategia de ranking según el deporte." "Spring Service"
