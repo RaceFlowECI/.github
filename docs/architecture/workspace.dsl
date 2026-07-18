@@ -5,11 +5,11 @@ workspace "RaceFlow" "Salas de entrenamiento colaborativas en tiempo real para d
     model {
         athlete = person "Atleta" "Crea o se une a salas, transmite GPS en vivo, ve mapa y ranking, habla por el chat de voz del grupo y consulta su historial."
 
-        mapsService = softwareSystem "Servicio de Mapas" "Provee los tiles del mapa para visualizar posiciones en vivo (Leaflet + OpenStreetMap)." {
+        mapsService = softwareSystem "OpenStreetMap" "Servidor público de tiles de mapa consumido vía Leaflet.js, dominio tile.openstreetmap.org. Sin API key ni contrato -- servicio abierto." {
             tags "External"
         }
 
-        geolocationApi = softwareSystem "API de Geolocalización" "API del navegador que provee las coordenadas GPS del dispositivo del atleta." {
+        geolocationApi = softwareSystem "Geolocation API (W3C)" "API nativa del navegador (navigator.geolocation.watchPosition), no un servicio de terceros: provee las coordenadas GPS del dispositivo del atleta en tiempo real." {
             tags "External"
         }
 
@@ -22,7 +22,7 @@ workspace "RaceFlow" "Salas de entrenamiento colaborativas en tiempo real para d
             gateway = container "API Gateway" "Punto de entrada REST (/api/**). Replicado en 2 workers tras el balanceador L7 integrado de App Service." "Spring Cloud Gateway"
 
             authService = container "Auth Service" "Registro, login, JWT (con claim name), amistades (solicitudes/aceptación, persistidas) y servidor gRPC interno :9090." "Java 21 + Spring Boot"
-            roomService = container "Room Service" "Ciclo de vida de salas: creación, ingreso por código, participantes." "Java 21 + Spring Boot"
+            roomService = container "Room Service" "Placeholder: el ciclo de vida de salas se consolidó en Realtime Service (ver RoomManager). Expone solo /actuator y sus métricas de negocio, reservado para separar esa responsabilidad más adelante." "Java 21 + Spring Boot"
 
             realtimeService = container "Realtime / Ranking Service" "Posiciones GPS por WebSocket, ranking, señalización del chat de voz WebRTC e invitaciones a salas (en memoria, tan efímeras como la sala). Fijado a 1 instancia." "Java 21 + Spring Boot + spring-websocket" {
                 wsHandler = component "RoomWebSocketHandler" "Conexiones WebSocket de cada sala: posiciones GPS, broadcast de ranking y señalización de voz (VOICE_JOIN/LEAVE/OFFER/ANSWER/ICE relevada al peer destino, con anti-suplantación)." "Spring WebSocket Handler"
@@ -61,11 +61,12 @@ workspace "RaceFlow" "Salas de entrenamiento colaborativas en tiempo real para d
         // ----- Relaciones de contexto (Nivel 1) -----
         athlete -> raceflow "Crea salas, transmite GPS, ve ranking en vivo, envía reacciones, consulta historial" "HTTPS + WebSocket"
         raceflow -> mapsService "Solicita tiles del mapa" "HTTPS"
-        athlete -> geolocationApi "Obtiene coordenadas GPS de su dispositivo"
+        raceflow -> geolocationApi "Obtiene coordenadas GPS del dispositivo del atleta" "Browser API"
 
         // ----- Relaciones de contenedores (Nivel 2) -----
         athlete -> raceflow.webapp "Accede desde el navegador" "HTTPS"
         raceflow.webapp -> mapsService "Solicita tiles del mapa" "HTTPS"
+        raceflow.webapp -> geolocationApi "Suscribe watchPosition() para coordenadas GPS en vivo" "Browser API"
         raceflow.webapp -> raceflow.gateway "Peticiones REST (registro, salas, historial, KPIs)" "JSON/HTTPS"
         raceflow.webapp -> raceflow.realtimeService "Canal de tiempo real DIRECTO: posiciones, ranking, señalización de voz" "WebSocket (WSS)"
 
@@ -82,10 +83,8 @@ workspace "RaceFlow" "Salas de entrenamiento colaborativas en tiempo real para d
         raceflow.sessionService -> raceflow.sessionDb "Lee/escribe" "JDBC"
         raceflow.metricsService -> raceflow.metricsDb "Lee/escribe el read model" "JDBC"
 
-        raceflow.roomService -> raceflow.broker "Publica eventos (sala creada/cerrada)" "AMQP"
-        raceflow.realtimeService -> raceflow.broker "Publica eventos (sesión finalizada, reacciones)" "AMQP"
-        raceflow.broker -> raceflow.sessionService "Entrega eventos para persistir sesiones" "AMQP"
-        raceflow.broker -> raceflow.metricsService "Entrega eventos para actualizar KPIs" "AMQP"
+        raceflow.realtimeService -> raceflow.broker "Publica evento room.activated al crear una sala (best-effort, no bloquea si el broker falla)" "AMQP, exchange raceflow.events"
+        raceflow.broker -> raceflow.metricsService "Entrega room.activated (cola metrics.room-events, binding room.*) para incrementar KPIs" "AMQP"
 
         // ----- Relaciones de componentes (Nivel 3) -----
         raceflow.webapp -> raceflow.realtimeService.authInterceptor "Handshake WebSocket con JWT" "WSS"

@@ -12,7 +12,9 @@ y [Structurizr Lite](https://structurizr.com/help/lite).
 ### Nivel 1 — Contexto del sistema
 
 > El Atleta interactúa con la plataforma RaceFlow a través de HTTPS y WebSocket.
-> RaceFlow consume el Servicio de Mapas (OpenStreetMap) y la API de Geolocalización del navegador.
+> RaceFlow consume **OpenStreetMap** (tiles del mapa, servicio abierto sin API key) y la
+> **Geolocation API (W3C)** del navegador (`navigator.geolocation.watchPosition`, no es un
+> servicio de terceros).
 
 ![Contexto](export/structurizr-Contexto.png)
 
@@ -20,13 +22,20 @@ y [Structurizr Lite](https://structurizr.com/help/lite).
 
 > Detalla los contenedores desplegables: la SPA React, el API Gateway (Spring Cloud Gateway),
 > los 5 microservicios Spring Boot, Redis, RabbitMQ y las 4 bases de datos PostgreSQL.
+> **Room Service es un placeholder** -- el ciclo de vida de salas se consolidó en Realtime
+> Service (`RoomManager`) y Room Service solo expone `/actuator` y sus métricas de negocio.
+> La mensajería vía RabbitMQ es real: Realtime Service publica `room.activated` al crear una
+> sala (best-effort) y Metrics Service lo consume para incrementar sus KPIs.
 
 ![Contenedores](export/structurizr-Contenedores.png)
 
 ### Nivel 3 — Componentes del Realtime Service
 
-> Zoom interno del servicio más crítico: `RoomWebSocketHandler` → `PositionIngestor`
-> → `RankingService` → `RankingStrategy` (Strategy) → `RoomStateClient` (Redis) → `EventPublisher` (RabbitMQ).
+> Zoom interno del servicio más crítico: `RoomWebSocketHandler` → `RoomManager` (estado de
+> salas + resolución del nombre autoritativo vía `GrpcAuthClient`) → `RankingService` →
+> `RankingStrategy` (Strategy, intercambiable por deporte) → Redis (caché del ranking, TTL 1h).
+> La autenticación del WebSocket ocurre en el handshake vía `WebSocketAuthInterceptor`, no en
+> esta cadena de componentes.
 
 ![Componentes Realtime](export/structurizr-Componentes_Realtime.png)
 

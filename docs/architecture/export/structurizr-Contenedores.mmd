@@ -4,10 +4,12 @@ graph LR
   subgraph diagram ["Container View: RaceFlow"]
     style diagram fill:#ffffff,stroke:#ffffff
 
-    1["<div style='font-weight: bold'>Atleta</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Crea o se une a salas,<br />transmite GPS en vivo, ve<br />mapa y ranking, envía<br />reacciones y consulta su<br />historial.</div>"]
+    1["<div style='font-weight: bold'>Atleta</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Crea o se une a salas,<br />transmite GPS en vivo, ve<br />mapa y ranking, habla por el<br />chat de voz del grupo y<br />consulta su historial.</div>"]
     style 1 fill:#1a3a5c,stroke:#122840,color:#ffffff
-    2("<div style='font-weight: bold'>Servicio de Mapas</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Provee los tiles del mapa<br />para visualizar posiciones en<br />vivo (Leaflet +<br />OpenStreetMap).</div>")
+    2("<div style='font-weight: bold'>OpenStreetMap</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Servidor público de tiles de<br />mapa consumido vía<br />Leaflet.js, dominio<br />tile.openstreetmap.org. Sin<br />API key ni contrato --<br />servicio abierto.</div>")
     style 2 fill:#999999,stroke:#6b6b6b,color:#ffffff
+    3("<div style='font-weight: bold'>Geolocation API (W3C)</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>API nativa del navegador<br />(navigator.geolocation.watchPosition),<br />no un servicio de terceros:<br />provee las coordenadas GPS<br />del dispositivo del atleta en<br />tiempo real.</div>")
+    style 3 fill:#999999,stroke:#6b6b6b,color:#ffffff
 
     subgraph 4 ["RaceFlow"]
       style 4 fill:#ffffff,stroke:#194f72,color:#194f72
@@ -28,25 +30,26 @@ graph LR
       style 22 fill:#12557c,stroke:#0c3b56,color:#ffffff
       23[("<div style='font-weight: bold'>Metrics DB</div><div style='font-size: 70%; margin-top: 0px'>[Container: PostgreSQL]</div><div style='font-size: 80%; margin-top:10px'>Read model de KPIs y<br />métricas.</div>")]
       style 23 fill:#12557c,stroke:#0c3b56,color:#ffffff
-      5["<div style='font-weight: bold'>Web Application</div><div style='font-size: 70%; margin-top: 0px'>[Container: React + TypeScript + Leaflet.js]</div><div style='font-size: 80%; margin-top:10px'>Interfaz del atleta: mapa en<br />vivo, ranking, reacciones,<br />registro, perfil e historial.</div>"]
+      5["<div style='font-weight: bold'>Web Application</div><div style='font-size: 70%; margin-top: 0px'>[Container: React + TypeScript + Leaflet.js]</div><div style='font-size: 80%; margin-top:10px'>Interfaz del atleta: mapa en<br />vivo, ranking, chat de voz<br />(WebRTC P2P), registro e<br />historial. Servida desde<br />Azure Static Web Apps.</div>"]
       style 5 fill:#17c3b2,stroke:#10887c,color:#06303a
-      6("<div style='font-weight: bold'>API Gateway</div><div style='font-size: 70%; margin-top: 0px'>[Container: Spring Cloud Gateway]</div><div style='font-size: 80%; margin-top:10px'>Punto de entrada único.<br />Enruta peticiones REST y<br />conexiones WebSocket, valida<br />el JWT. Replicado para no ser<br />punto único de falla.</div>")
+      6("<div style='font-weight: bold'>API Gateway</div><div style='font-size: 70%; margin-top: 0px'>[Container: Spring Cloud Gateway]</div><div style='font-size: 80%; margin-top:10px'>Punto de entrada REST<br />(/api/**). Replicado en 2<br />workers tras el balanceador<br />L7 integrado de App Service.</div>")
       style 6 fill:#438dd5,stroke:#2e6295,color:#ffffff
-      7("<div style='font-weight: bold'>Auth Service</div><div style='font-size: 70%; margin-top: 0px'>[Container: Java 21 + Spring Boot]</div><div style='font-size: 80%; margin-top:10px'>Registro, inicio de sesión y<br />emisión de tokens JWT.</div>")
+      7("<div style='font-weight: bold'>Auth Service</div><div style='font-size: 70%; margin-top: 0px'>[Container: Java 21 + Spring Boot]</div><div style='font-size: 80%; margin-top:10px'>Registro, login, JWT (con<br />claim name), amistades<br />(solicitudes/aceptación,<br />persistidas) y servidor gRPC<br />interno :9090.</div>")
       style 7 fill:#438dd5,stroke:#2e6295,color:#ffffff
-      8("<div style='font-weight: bold'>Room Service</div><div style='font-size: 70%; margin-top: 0px'>[Container: Java 21 + Spring Boot]</div><div style='font-size: 80%; margin-top:10px'>Ciclo de vida de salas:<br />creación, ingreso por código,<br />participantes.</div>")
+      8("<div style='font-weight: bold'>Room Service</div><div style='font-size: 70%; margin-top: 0px'>[Container: Java 21 + Spring Boot]</div><div style='font-size: 80%; margin-top:10px'>Placeholder: el ciclo de vida<br />de salas se consolidó en<br />Realtime Service (ver<br />RoomManager). Expone solo<br />/actuator y sus métricas de<br />negocio, reservado para<br />separar esa responsabilidad<br />más adelante.</div>")
       style 8 fill:#438dd5,stroke:#2e6295,color:#ffffff
-      9("<div style='font-weight: bold'>Realtime / Ranking Service</div><div style='font-size: 70%; margin-top: 0px'>[Container: Java 21 + Spring Boot + spring-websocket]</div><div style='font-size: 80%; margin-top:10px'>Recibe posiciones GPS por<br />WebSocket, recalcula el<br />ranking y difunde a los<br />participantes. Escala<br />horizontalmente.</div>")
+      9("<div style='font-weight: bold'>Realtime / Ranking Service</div><div style='font-size: 70%; margin-top: 0px'>[Container: Java 21 + Spring Boot + spring-websocket]</div><div style='font-size: 80%; margin-top:10px'>Posiciones GPS por WebSocket,<br />ranking, señalización del<br />chat de voz WebRTC e<br />invitaciones a salas (en<br />memoria, tan efímeras como la<br />sala). Fijado a 1 instancia.</div>")
       style 9 fill:#438dd5,stroke:#2e6295,color:#ffffff
     end
 
     1-. "<div>Accede desde el navegador</div><div style='font-size: 70%'>[HTTPS]</div>" .->5
     5-. "<div>Solicita tiles del mapa</div><div style='font-size: 70%'>[HTTPS]</div>" .->2
+    5-. "<div>Suscribe watchPosition() para<br />coordenadas GPS en vivo</div><div style='font-size: 70%'>[Browser API]</div>" .->3
     5-. "<div>Peticiones REST (registro,<br />salas, historial, KPIs)</div><div style='font-size: 70%'>[JSON/HTTPS]</div>" .->6
-    5-. "<div>Canal de tiempo real:<br />posiciones, ranking,<br />reacciones</div><div style='font-size: 70%'>[WebSocket]</div>" .->6
+    5-. "<div>Canal de tiempo real DIRECTO:<br />posiciones, ranking,<br />señalización de voz</div><div style='font-size: 70%'>[WebSocket (WSS)]</div>" .->9
     6-. "<div>Enruta autenticación</div><div style='font-size: 70%'>[JSON/HTTPS]</div>" .->7
-    6-. "<div>Enruta gestión de salas</div><div style='font-size: 70%'>[JSON/HTTPS]</div>" .->8
-    6-. "<div>Enruta el canal de tiempo<br />real</div><div style='font-size: 70%'>[WebSocket]</div>" .->9
+    6-. "<div>Enruta gestión de salas<br />(/api/rooms/**)</div><div style='font-size: 70%'>[JSON/HTTPS]</div>" .->9
+    9-. "<div>Consulta el nombre<br />autoritativo del atleta (con<br />fallback)</div><div style='font-size: 70%'>[gRPC :9090]</div>" .->7
     6-. "<div>Enruta consultas de historial</div><div style='font-size: 70%'>[JSON/HTTPS]</div>" .->16
     6-. "<div>Enruta consultas de KPIs</div><div style='font-size: 70%'>[JSON/HTTPS]</div>" .->17
     9-. "<div>Lee y actualiza el estado de<br />sala y el ranking<br />(operaciones atómicas)</div><div style='font-size: 70%'>[Redis protocol]</div>" .->19
@@ -54,10 +57,7 @@ graph LR
     8-. "<div>Lee/escribe</div><div style='font-size: 70%'>[JDBC]</div>" .->21
     16-. "<div>Lee/escribe</div><div style='font-size: 70%'>[JDBC]</div>" .->22
     17-. "<div>Lee/escribe el read model</div><div style='font-size: 70%'>[JDBC]</div>" .->23
-    8-. "<div>Publica eventos (sala<br />creada/cerrada)</div><div style='font-size: 70%'>[AMQP]</div>" .->18
-    9-. "<div>Publica eventos (sesión<br />finalizada, reacciones)</div><div style='font-size: 70%'>[AMQP]</div>" .->18
-    18-. "<div>Entrega eventos para<br />persistir sesiones</div><div style='font-size: 70%'>[AMQP]</div>" .->16
-    18-. "<div>Entrega eventos para<br />actualizar KPIs</div><div style='font-size: 70%'>[AMQP]</div>" .->17
-    5-. "<div>Emite posiciones y<br />reacciones; recibe ranking y<br />posiciones</div><div style='font-size: 70%'>[WebSocket]</div>" .->9
+    9-. "<div>Publica evento room.activated<br />al crear una sala<br />(best-effort, no bloquea si<br />el broker falla)</div><div style='font-size: 70%'>[AMQP, exchange raceflow.events]</div>" .->18
+    18-. "<div>Entrega room.activated (cola<br />metrics.room-events, binding<br />room.*) para incrementar KPIs</div><div style='font-size: 70%'>[AMQP]</div>" .->17
 
   end

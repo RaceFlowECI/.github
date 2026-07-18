@@ -10,35 +10,35 @@ graph LR
       subgraph 9 ["Realtime / Ranking Service"]
         style 9 fill:#ffffff,stroke:#2e6295,color:#2e6295
 
-        10("<div style='font-weight: bold'>RoomWebSocketHandler</div><div style='font-size: 70%; margin-top: 0px'>[Component: Spring WebSocket Handler]</div><div style='font-size: 80%; margin-top:10px'>Gestiona las conexiones<br />WebSocket de cada sala:<br />recibe posiciones y<br />reacciones, difunde<br />(broadcast) a los<br />participantes suscritos.</div>")
+        10("<div style='font-weight: bold'>RoomWebSocketHandler</div><div style='font-size: 70%; margin-top: 0px'>[Component: Spring WebSocket Handler]</div><div style='font-size: 80%; margin-top:10px'>Conexiones WebSocket de cada<br />sala: posiciones GPS,<br />broadcast de ranking y<br />señalización de voz<br />(VOICE_JOIN/LEAVE/OFFER/ANSWER/ICE<br />relevada al peer destino, con<br />anti-suplantación).</div>")
         style 10 fill:#85bbf0,stroke:#5d82a8,color:#000000
-        11("<div style='font-weight: bold'>PositionIngestor</div><div style='font-size: 70%; margin-top: 0px'>[Component: Spring Component]</div><div style='font-size: 80%; margin-top:10px'>Valida cada posición GPS<br />entrante (descarta saltos<br />imposibles o datos<br />manipulados) antes de<br />procesarla.</div>")
+        11("<div style='font-weight: bold'>RoomManager</div><div style='font-size: 70%; margin-top: 0px'>[Component: Spring Service]</div><div style='font-size: 80%; margin-top:10px'>Estado de salas en memoria<br />(ConcurrentHashMap); resuelve<br />el nombre autoritativo del<br />atleta vía gRPC con fallback.</div>")
         style 11 fill:#85bbf0,stroke:#5d82a8,color:#000000
         12("<div style='font-weight: bold'>RankingService</div><div style='font-size: 70%; margin-top: 0px'>[Component: Spring Service]</div><div style='font-size: 80%; margin-top:10px'>Recalcula el ranking de la<br />sala ante cada posición. Usa<br />la estrategia de ranking<br />según el deporte.</div>")
         style 12 fill:#85bbf0,stroke:#5d82a8,color:#000000
         13("<div style='font-weight: bold'>RankingStrategy</div><div style='font-size: 70%; margin-top: 0px'>[Component: Strategy (interfaz)]</div><div style='font-size: 80%; margin-top:10px'>Interfaz de cálculo de<br />ranking. Implementaciones<br />intercambiables por deporte<br />(distancia, velocidad).</div>")
         style 13 fill:#85bbf0,stroke:#5d82a8,color:#000000
-        14("<div style='font-weight: bold'>RoomStateClient</div><div style='font-size: 70%; margin-top: 0px'>[Component: Spring Data Redis]</div><div style='font-size: 80%; margin-top:10px'>Lee y actualiza el estado de<br />sala y el ranking en Redis<br />con operaciones atómicas;<br />fuente única entre réplicas.</div>")
+        14("<div style='font-weight: bold'>GrpcAuthClient</div><div style='font-size: 70%; margin-top: 0px'>[Component: grpc-java]</div><div style='font-size: 80%; margin-top:10px'>Cliente gRPC hacia<br />auth-service<br />(UserProfileService); timeout<br />2s y fallback al nombre del<br />cliente.</div>")
         style 14 fill:#85bbf0,stroke:#5d82a8,color:#000000
-        15("<div style='font-weight: bold'>EventPublisher</div><div style='font-size: 70%; margin-top: 0px'>[Component: Spring AMQP]</div><div style='font-size: 80%; margin-top:10px'>Publica eventos de dominio<br />(sesión finalizada,<br />reacciones) en el broker.</div>")
+        15("<div style='font-weight: bold'>WebSocketAuthInterceptor</div><div style='font-size: 70%; margin-top: 0px'>[Component: HandshakeInterceptor]</div><div style='font-size: 80%; margin-top:10px'>Valida el JWT en el handshake<br />del WebSocket (?token=).</div>")
         style 15 fill:#85bbf0,stroke:#5d82a8,color:#000000
       end
 
-      18["<div style='font-weight: bold'>Event Bus</div><div style='font-size: 70%; margin-top: 0px'>[Container: RabbitMQ]</div><div style='font-size: 80%; margin-top:10px'>Transporta eventos asíncronos<br />entre servicios (sesión<br />cerrada, sala creada,<br />métricas).</div>"]
-      style 18 fill:#6c3483,stroke:#4b245b,color:#ffffff
       19[("<div style='font-weight: bold'>Estado en memoria</div><div style='font-size: 70%; margin-top: 0px'>[Container: Redis]</div><div style='font-size: 80%; margin-top:10px'>Estado compartido de salas y<br />ranking; operaciones<br />atómicas; fuente única de<br />verdad entre réplicas.</div>")]
       style 19 fill:#c0392b,stroke:#86271e,color:#ffffff
-      5["<div style='font-weight: bold'>Web Application</div><div style='font-size: 70%; margin-top: 0px'>[Container: React + TypeScript + Leaflet.js]</div><div style='font-size: 80%; margin-top:10px'>Interfaz del atleta: mapa en<br />vivo, ranking, reacciones,<br />registro, perfil e historial.</div>"]
+      5["<div style='font-weight: bold'>Web Application</div><div style='font-size: 70%; margin-top: 0px'>[Container: React + TypeScript + Leaflet.js]</div><div style='font-size: 80%; margin-top:10px'>Interfaz del atleta: mapa en<br />vivo, ranking, chat de voz<br />(WebRTC P2P), registro e<br />historial. Servida desde<br />Azure Static Web Apps.</div>"]
       style 5 fill:#17c3b2,stroke:#10887c,color:#06303a
+      7("<div style='font-weight: bold'>Auth Service</div><div style='font-size: 70%; margin-top: 0px'>[Container: Java 21 + Spring Boot]</div><div style='font-size: 80%; margin-top:10px'>Registro, login, JWT (con<br />claim name), amistades<br />(solicitudes/aceptación,<br />persistidas) y servidor gRPC<br />interno :9090.</div>")
+      style 7 fill:#438dd5,stroke:#2e6295,color:#ffffff
     end
 
-    5-. "<div>Emite posiciones y<br />reacciones; recibe ranking y<br />posiciones</div><div style='font-size: 70%'>[WebSocket]</div>" .->10
-    10-. "<div>Entrega la posición entrante<br />para validar</div><div style='font-size: 70%'></div>" .->11
-    11-. "<div>Envía la posición válida para<br />recalcular el ranking</div><div style='font-size: 70%'></div>" .->12
+    5-. "<div>Handshake WebSocket con JWT</div><div style='font-size: 70%'>[WSS]</div>" .->15
+    15-. "<div>Conexión autenticada</div><div style='font-size: 70%'></div>" .->10
+    10-. "<div>Registra sesiones y consulta<br />salas</div><div style='font-size: 70%'></div>" .->11
+    10-. "<div>Recalcula el ranking ante<br />cada posición</div><div style='font-size: 70%'></div>" .->12
     12-. "<div>Calcula el orden según el<br />deporte</div><div style='font-size: 70%'></div>" .->13
-    12-. "<div>Lee/actualiza estado y<br />ranking</div><div style='font-size: 70%'></div>" .->14
-    14-. "<div>Operaciones atómicas sobre el<br />estado de sala</div><div style='font-size: 70%'>[Redis protocol]</div>" .->19
-    10-. "<div>Notifica sesión finalizada /<br />reacciones</div><div style='font-size: 70%'></div>" .->15
-    15-. "<div>Publica eventos de dominio</div><div style='font-size: 70%'>[AMQP]</div>" .->18
+    12-. "<div>Cachea el ranking (TTL 1h)</div><div style='font-size: 70%'>[Redis protocol]</div>" .->19
+    11-. "<div>Resuelve el nombre<br />autoritativo</div><div style='font-size: 70%'></div>" .->14
+    14-. "<div>UserProfileService.getProfile(email)</div><div style='font-size: 70%'>[gRPC :9090]</div>" .->7
 
   end
