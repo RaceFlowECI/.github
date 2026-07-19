@@ -155,3 +155,34 @@ observabilidad (trazas, métricas, logs) tiene que correlacionar eventos across 
 vez de leer un solo stack trace. Ninguna de estas decisiones es gratis — son trade-offs
 conscientes, tomados porque el dominio (entrenamiento en tiempo real, con salas efímeras y
 alta frecuencia de escritura) los justifica más que la simplicidad operativa de un monolito.
+
+## 6. Estrategia de ramas — desviación detectada y corregida
+
+Los repos del proyecto (`raceflow-frontend` entre ellos) definieron desde el inicio una rama
+`develop` como integración intermedia entre las ramas `feature/*` y `main`. En la práctica, a
+partir de la PR #7 de `raceflow-frontend` el equipo empezó a mergear features directo contra
+`main`, saltándose `develop` por completo — `develop` quedó congelada mientras `main` seguía
+avanzando.
+
+**Alcance de la desviación** (verificado contra el historial real, no supuesto): las PRs
+`#3, #5, #7, #8, #9, #10, #11, #12, #13` de `raceflow-frontend` se mergearon directo a
+`main` sin pasar por `develop`.
+
+**Corrección aplicada** (2026-07-19):
+
+1. `develop` se puso al día con `main` mediante fast-forward — no existía ningún commit en
+   `develop` que no estuviera ya en `main`, así que la operación no descartó trabajo de nadie.
+2. Las PRs abiertas en ese momento (`#14, #15, #16, #17`) se re-apuntaron de `main` a
+   `develop`.
+3. De aquí en adelante el flujo correcto queda vigente: `feature/*` → PR → `develop`, y
+   periódicamente una PR de promoción `develop` → `main` (patrón que el repo ya había usado
+   una vez, en la PR #10, `promote/develop-to-main`) antes de cada entrega o de la
+   sustentación.
+
+**Por qué no se reescribió el historial de las 9 PRs ya mergeadas**: hacerlo exige reescribir
+el SHA de cada commit de `main` desde el inicio del proyecto y un `push --force` sobre una
+rama compartida — rompe los enlaces de las PRs ya cerradas en GitHub, desincroniza cualquier
+clon local del equipo, y el riesgo de un force-push mal ejecutado sobre `main` días antes de
+la sustentación no se justifica solo por "limpiar" SHAs que ya cumplieron su función. La
+decisión consciente fue documentar la desviación con evidencia concreta (arriba) en vez de
+simularla retroactivamente.
