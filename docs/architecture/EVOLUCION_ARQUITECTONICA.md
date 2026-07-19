@@ -158,31 +158,61 @@ alta frecuencia de escritura) los justifica más que la simplicidad operativa de
 
 ## 6. Estrategia de ramas — desviación detectada y corregida
 
-Los repos del proyecto (`raceflow-frontend` entre ellos) definieron desde el inicio una rama
-`develop` como integración intermedia entre las ramas `feature/*` y `main`. En la práctica, a
-partir de la PR #7 de `raceflow-frontend` el equipo empezó a mergear features directo contra
-`main`, saltándose `develop` por completo — `develop` quedó congelada mientras `main` seguía
-avanzando.
+Todos los repos del proyecto definieron desde el inicio una rama `develop` como integración
+intermedia entre las ramas `feature/*` y `main`. En la práctica, en **los 7 repos** el equipo
+fue mergeando features directo contra `main` en distintos momentos, saltándose `develop` —
+que quedó congelada mientras `main` seguía avanzando.
 
-**Alcance de la desviación** (verificado contra el historial real, no supuesto): las PRs
-`#3, #5, #7, #8, #9, #10, #11, #12, #13` de `raceflow-frontend` se mergearon directo a
-`main` sin pasar por `develop`.
+**Alcance de la desviación** (verificado contra el historial real de cada repo, no supuesto):
 
-**Corrección aplicada** (2026-07-19):
+| Repo | PRs mergeadas directo a `main` (saltándose `develop`) |
+|---|---|
+| `raceflow-frontend` | #3, #5, #7, #8, #9, #10, #11, #12, #13 |
+| `raceflow-auth-service` | #15, #16, #17, #18 |
+| `raceflow-realtime-service` | #17, #18, #19, #20, #21, #22 |
+| `raceflow-room-service` | #14, #15 |
+| `raceflow-session-service` | #12, #13 |
+| `raceflow-metrics-service` | #12, #13 |
+| `raceflow-api-gateway` | #15, #16 |
 
-1. `develop` se puso al día con `main` mediante fast-forward — no existía ningún commit en
-   `develop` que no estuviera ya en `main`, así que la operación no descartó trabajo de nadie.
-2. Las PRs abiertas en ese momento (`#14, #15, #16, #17`) se re-apuntaron de `main` a
-   `develop`.
-3. De aquí en adelante el flujo correcto queda vigente: `feature/*` → PR → `develop`, y
-   periódicamente una PR de promoción `develop` → `main` (patrón que el repo ya había usado
-   una vez, en la PR #10, `promote/develop-to-main`) antes de cada entrega o de la
-   sustentación.
+**Corrección aplicada (2026-07-19):**
 
-**Por qué no se reescribió el historial de las 9 PRs ya mergeadas**: hacerlo exige reescribir
-el SHA de cada commit de `main` desde el inicio del proyecto y un `push --force` sobre una
-rama compartida — rompe los enlaces de las PRs ya cerradas en GitHub, desincroniza cualquier
-clon local del equipo, y el riesgo de un force-push mal ejecutado sobre `main` días antes de
-la sustentación no se justifica solo por "limpiar" SHAs que ya cumplieron su función. La
-decisión consciente fue documentar la desviación con evidencia concreta (arriba) en vez de
-simularla retroactivamente.
+1. En cada repo, `develop` se puso al día con `main`. En 6 de los 7 repos esto se hizo con una
+   **PR real y visible** (`sync: fast-forward develop to main`, rama `sync/develop-with-main`
+   → `develop`, mergeada hoy con su fecha real, sin fingir cronología pasada):
+   - `raceflow-auth-service` [#22](https://github.com/RaceFlowECI/raceflow-auth-service/pull/22)
+   - `raceflow-realtime-service` [#25](https://github.com/RaceFlowECI/raceflow-realtime-service/pull/25)
+   - `raceflow-room-service` [#17](https://github.com/RaceFlowECI/raceflow-room-service/pull/17)
+   - `raceflow-session-service` [#15](https://github.com/RaceFlowECI/raceflow-session-service/pull/15)
+   - `raceflow-metrics-service` [#16](https://github.com/RaceFlowECI/raceflow-metrics-service/pull/16)
+   - `raceflow-api-gateway` [#18](https://github.com/RaceFlowECI/raceflow-api-gateway/pull/18)
+
+   En `raceflow-frontend` la sincronización se hizo primero con un `git push` directo a
+   `develop` (commit `f5f3d8b..4811a8f`, 2026-07-19) — un error de forma, no de fondo: quedó
+   sin PR asociada. Se documenta aquí explícitamente para no perder la trazabilidad solo
+   porque falta el "recibo" de PR que sí tienen los otros 6 repos.
+2. En ningún repo esta sincronización descartó trabajo: no existía ningún commit en `develop`
+   que no estuviera ya en `main`, así que fue un fast-forward puro en los 7 casos.
+3. Las PRs que en ese momento estaban abiertas contra `main` se re-apuntaron a `develop` en
+   los 7 repos:
+   - `raceflow-frontend`: #14, #15, #16, #17
+   - `raceflow-auth-service`: #19, #20, #21
+   - `raceflow-realtime-service`: #23, #24
+   - `raceflow-room-service`: #16
+   - `raceflow-session-service`: #14
+   - `raceflow-metrics-service`: #14, #15
+   - `raceflow-api-gateway`: #17
+4. De aquí en adelante el flujo correcto queda vigente en los 7 repos: `feature/*` → PR →
+   `develop`, y periódicamente una PR de promoción `develop` → `main` (patrón que varios repos
+   ya habían usado antes, p. ej. `promote/develop-to-main` en `raceflow-frontend` PR #10) antes
+   de cada entrega o de la sustentación.
+
+**Por qué no se reescribió el historial de las PRs ya mergeadas directo a `main`**: hacerlo
+exige reescribir el SHA de cada commit de `main` desde el inicio del proyecto, en 7
+repositorios, y un `push --force` sobre ramas compartidas — rompe los enlaces de las PRs ya
+cerradas en GitHub, desincroniza cualquier clon local del equipo, y el riesgo de un
+force-push mal ejecutado sobre `main` días antes de la sustentación no se justifica solo por
+"limpiar" SHAs que ya cumplieron su función. Tampoco es posible crear hoy PRs que aparenten
+haberse mergeado en el pasado — GitHub registra la fecha real de creación, no una fecha
+retroactiva, así que simularlo sería menos honesto que documentar la desviación con evidencia
+concreta, que es la decisión que se tomó aquí.
