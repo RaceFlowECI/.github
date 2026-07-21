@@ -1,44 +1,61 @@
-graph LR
+graph TB
   linkStyle default fill:#ffffff
 
   subgraph diagram ["Component View: RaceFlow - Realtime / Ranking Service"]
+    direction TB
     style diagram fill:#ffffff,stroke:#ffffff
 
-    subgraph 4 ["RaceFlow"]
-      style 4 fill:#ffffff,stroke:#194f72,color:#194f72
+    subgraph rowA [" "]
+      direction LR
+      style rowA fill:#ffffff,stroke:#ffffff
 
-      subgraph 9 ["Realtime / Ranking Service"]
-        style 9 fill:#ffffff,stroke:#2e6295,color:#2e6295
-
-        10("<div style='font-weight: bold'>RoomWebSocketHandler</div><div style='font-size: 70%; margin-top: 0px'>[Component: Spring WebSocket Handler]</div><div style='font-size: 80%; margin-top:10px'>Gestiona las conexiones<br />WebSocket de cada sala:<br />recibe posiciones y<br />reacciones, difunde<br />(broadcast) a los<br />participantes suscritos.</div>")
-        style 10 fill:#85bbf0,stroke:#5d82a8,color:#000000
-        11("<div style='font-weight: bold'>PositionIngestor</div><div style='font-size: 70%; margin-top: 0px'>[Component: Spring Component]</div><div style='font-size: 80%; margin-top:10px'>Valida cada posición GPS<br />entrante (descarta saltos<br />imposibles o datos<br />manipulados) antes de<br />procesarla.</div>")
-        style 11 fill:#85bbf0,stroke:#5d82a8,color:#000000
-        12("<div style='font-weight: bold'>RankingService</div><div style='font-size: 70%; margin-top: 0px'>[Component: Spring Service]</div><div style='font-size: 80%; margin-top:10px'>Recalcula el ranking de la<br />sala ante cada posición. Usa<br />la estrategia de ranking<br />según el deporte.</div>")
-        style 12 fill:#85bbf0,stroke:#5d82a8,color:#000000
-        13("<div style='font-weight: bold'>RankingStrategy</div><div style='font-size: 70%; margin-top: 0px'>[Component: Strategy (interfaz)]</div><div style='font-size: 80%; margin-top:10px'>Interfaz de cálculo de<br />ranking. Implementaciones<br />intercambiables por deporte<br />(distancia, velocidad).</div>")
-        style 13 fill:#85bbf0,stroke:#5d82a8,color:#000000
-        14("<div style='font-weight: bold'>RoomStateClient</div><div style='font-size: 70%; margin-top: 0px'>[Component: Spring Data Redis]</div><div style='font-size: 80%; margin-top:10px'>Lee y actualiza el estado de<br />sala y el ranking en Redis<br />con operaciones atómicas;<br />fuente única entre réplicas.</div>")
-        style 14 fill:#85bbf0,stroke:#5d82a8,color:#000000
-        15("<div style='font-weight: bold'>EventPublisher</div><div style='font-size: 70%; margin-top: 0px'>[Component: Spring AMQP]</div><div style='font-size: 80%; margin-top:10px'>Publica eventos de dominio<br />(sesión finalizada,<br />reacciones) en el broker.</div>")
-        style 15 fill:#85bbf0,stroke:#5d82a8,color:#000000
-      end
-
-      18["<div style='font-weight: bold'>Event Bus</div><div style='font-size: 70%; margin-top: 0px'>[Container: RabbitMQ]</div><div style='font-size: 80%; margin-top:10px'>Transporta eventos asíncronos<br />entre servicios (sesión<br />cerrada, sala creada,<br />métricas).</div>"]
-      style 18 fill:#6c3483,stroke:#4b245b,color:#ffffff
-      19[("<div style='font-weight: bold'>Estado en memoria</div><div style='font-size: 70%; margin-top: 0px'>[Container: Redis]</div><div style='font-size: 80%; margin-top:10px'>Estado compartido de salas y<br />ranking; operaciones<br />atómicas; fuente única de<br />verdad entre réplicas.</div>")]
-      style 19 fill:#c0392b,stroke:#86271e,color:#ffffff
-      5["<div style='font-weight: bold'>Web Application</div><div style='font-size: 70%; margin-top: 0px'>[Container: React + TypeScript + Leaflet.js]</div><div style='font-size: 80%; margin-top:10px'>Interfaz del atleta: mapa en<br />vivo, ranking, reacciones,<br />registro, perfil e historial.</div>"]
+      5["<b>Web Application</b><br/><i>[Container: React + TS]</i>"]
       style 5 fill:#17c3b2,stroke:#10887c,color:#06303a
+
+      16("<b>WebSocketAuthInterceptor</b><br/><i>[HandshakeInterceptor]</i><br/>Valida el JWT en el handshake")
+      style 16 fill:#85bbf0,stroke:#5d82a8,color:#000000
+
+      10("<b>RoomWebSocketHandler</b><br/><i>[Spring WebSocket Handler]</i><br/>Posiciones GPS, broadcast de ranking, señalización de voz")
+      style 10 fill:#85bbf0,stroke:#5d82a8,color:#000000
+
+      5 -. "Handshake WebSocket con JWT [WSS]" .-> 16
+      16 -. "Conexión autenticada" .-> 10
     end
 
-    5-. "<div>Emite posiciones y<br />reacciones; recibe ranking y<br />posiciones</div><div style='font-size: 70%'>[WebSocket]</div>" .->10
-    10-. "<div>Entrega la posición entrante<br />para validar</div><div style='font-size: 70%'></div>" .->11
-    11-. "<div>Envía la posición válida para<br />recalcular el ranking</div><div style='font-size: 70%'></div>" .->12
-    12-. "<div>Calcula el orden según el<br />deporte</div><div style='font-size: 70%'></div>" .->13
-    12-. "<div>Lee/actualiza estado y<br />ranking</div><div style='font-size: 70%'></div>" .->14
-    14-. "<div>Operaciones atómicas sobre el<br />estado de sala</div><div style='font-size: 70%'>[Redis protocol]</div>" .->19
-    10-. "<div>Notifica sesión finalizada /<br />reacciones</div><div style='font-size: 70%'></div>" .->15
-    15-. "<div>Publica eventos de dominio</div><div style='font-size: 70%'>[AMQP]</div>" .->18
+    subgraph rowB [" "]
+      direction LR
+      style rowB fill:#ffffff,stroke:#ffffff
 
+      17("<b>RoomManager</b><br/><i>[Spring Service]</i><br/>Estado de salas en memoria")
+      style 17 fill:#85bbf0,stroke:#5d82a8,color:#000000
+
+      20("<b>GrpcAuthClient</b><br/><i>[grpc-java]</i><br/>Resuelve el nombre autoritativo")
+      style 20 fill:#85bbf0,stroke:#5d82a8,color:#000000
+
+      21["<b>Auth Service</b><br/><i>[Container: Java 21 + Spring Boot]</i>"]
+      style 21 fill:#438DD5,stroke:#2e6295,color:#ffffff
+
+      17 -. "Resuelve el nombre autoritativo" .-> 20
+      20 -. "getProfile(email) [gRPC :9090]" .-> 21
+    end
+
+    subgraph rowC [" "]
+      direction LR
+      style rowC fill:#ffffff,stroke:#ffffff
+
+      12("<b>RankingService</b><br/><i>[Spring Service]</i><br/>Recalcula el ranking ante cada posición")
+      style 12 fill:#85bbf0,stroke:#5d82a8,color:#000000
+
+      13("<b>RankingStrategy</b><br/><i>[Strategy]</i><br/>Cálculo intercambiable por deporte")
+      style 13 fill:#85bbf0,stroke:#5d82a8,color:#000000
+
+      19[("<b>Estado en memoria</b><br/><i>[Container: Redis]</i>")]
+      style 19 fill:#c0392b,stroke:#86271e,color:#ffffff
+
+      12 -. "Calcula el orden según el deporte" .-> 13
+      12 -. "Cachea el ranking (TTL 1h) [Redis protocol]" .-> 19
+    end
+
+    10 -. "Registra sesiones y consulta salas" .-> 17
+    10 -. "Recalcula el ranking ante cada posición" .-> 12
   end

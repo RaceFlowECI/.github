@@ -1,18 +1,18 @@
-flowchart LR
+graph LR
   linkStyle default fill:#ffffff
 
-  1["<div style='font-weight: bold'>Atleta</div><div style='font-size: 70%; margin-top: 0px'>[Person]</div><div style='font-size: 80%; margin-top:10px'>Crea o se une a salas,<br />transmite GPS en vivo, ve<br />mapa y ranking, envía<br />reacciones y consulta su<br />historial.</div>"]
+  1["<b>Atleta</b><br/><i>[Person]</i><br/>Crea/une salas, transmite GPS, ve ranking"]
   style 1 fill:#1a3a5c,stroke:#122840,color:#ffffff
 
-  4("<div style='font-weight: bold'>RaceFlow</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Plataforma web de salas de<br />entrenamiento colaborativas<br />en tiempo real para deportes<br />de cronometraje.</div>")
+  4("<b>RaceFlow</b><br/><i>[Software System]</i><br/>Salas de entrenamiento colaborativas en tiempo real")
   style 4 fill:#2471a3,stroke:#194f72,color:#ffffff
 
-  2("<div style='font-weight: bold'>Servicio de Mapas</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>Provee los tiles del mapa<br />para visualizar posiciones en<br />vivo (Leaflet + OpenStreetMap).</div>")
+  2("<b>Servicio de Mapas</b><br/><i>[External]</i> Leaflet + OSM")
   style 2 fill:#999999,stroke:#6b6b6b,color:#ffffff
 
-  3("<div style='font-weight: bold'>API de Geolocalización</div><div style='font-size: 70%; margin-top: 0px'>[Software System]</div><div style='font-size: 80%; margin-top:10px'>API del navegador que provee<br />las coordenadas GPS del<br />dispositivo del atleta.</div>")
+  3("<b>API de Geolocalización</b><br/><i>[External]</i> GPS del navegador")
   style 3 fill:#999999,stroke:#6b6b6b,color:#ffffff
 
-  1-. "<div>Crea salas, transmite GPS, ve ranking en vivo,<br />envía reacciones, consulta historial</div><div style='font-size: 70%'>[HTTPS + WebSocket]</div>" .->4
-  4-. "<div>Solicita tiles del mapa</div><div style='font-size: 70%'>[HTTPS]</div>" .->2
-  1-. "<div>Obtiene coordenadas GPS de su dispositivo</div>" .->3
+  1 -. "Crea salas, transmite GPS, ve ranking, historial [HTTPS + WSS]" .-> 4
+  4 -. "Tiles del mapa [HTTPS]" .-> 2
+  1 -. "Coordenadas GPS" .-> 3
